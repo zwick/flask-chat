@@ -1,0 +1,52 @@
+<html>
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+    <script type="text/javascript" charset="utf-8">
+        const socket = io();
+        socket.on('connect', function() {
+            socket.emit('start_session', { id: socket.id });
+        });
+
+        socket.on('session_start_failed', function () {
+            console.log('Failed to start a session with the server');
+        });
+
+        socket.on('session_started', function () {
+            console.log('Successfully started new session with the server');
+        });
+
+        socket.on('broadcast_message', function (data) {
+            console.log('Received broadcast message from the server', data);
+            const messages = document.getElementById('messages');
+            const li = document.createElement('li');
+            li.appendChild(document.createTextNode(data.user + ': ' + data.message));
+            messages.appendChild(li);
+        });
+
+        const sendData = () => {
+            // Randomize user based on connection id
+            const user = socket.id;
+            const message = document.getElementById('message').value;
+            socket.emit("send_message", { user: user, message: message });
+        }
+    </script>
+</head>
+<body>
+<header>
+
+</header>
+<main>
+    <div>
+        <label for="message">Message:</label> <input name="message" type="text" id="message" />
+        <button onclick="sendData()">Send Data</button>
+    </div>
+    <div>
+        <h2>Messages</h2>
+        <ul id="messages"></ul>
+    </div>
+</main>
+<footer>
+
+</footer>
+</body>
+</html>
