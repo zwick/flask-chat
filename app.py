@@ -1,27 +1,61 @@
-from flask import Flask, render_template
-from flask_socketio import SocketIO, send, emit
-import random
+from pyexpat.errors import messages
+
+from flask import Flask, session, request, render_template
+from flask_socketio import SocketIO, emit, join_room, leave_room
+
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'test'
 socketio = SocketIO(app)
+
+# Dictionary to map sessions to usernames
+users = {}
+
 @app.route('/')
 def main():
     return render_template('home.j2')
 
-@socketio.on('start_session')
-def start_new_session(data):
-    print('New session started', data)
+@socketio.on('connect')
+def handle_connect():
+    emit('connected', {'data': 'Connected'})
 
-    # We enjoy chaos. 10% of the time, send a session_start_failed event
-    if random.random() < 0.10:
-        emit('session_start_failed', {'clientId': data})
-    else:
-        emit('session_started', {'clientId': data, 'sessionId': data})
+@socketio.on('disconnect')
+def handle_disconnect():
+    user = users.get(request.sid)
+    room = session.get('room')
+
+    if user and room:
+        on_leave({'user': user, 'room': room})
+
+    users.pop(request.sid, None)
+
+
+@socketio.on('join')
+def on_join(data):
+    user = data['user']
+    room = data['room']
+
+    session['user'] = user
+    session['room'] = room
+    users[request.sid] = user
+
+    join_room(room)
+    emit('user_joined', {'user': user, 'room': room}, broadcast=True, to=room)
+
+@socketio.on('leave')
+def on_leave(data):
+    user = data['user']
+    room = data['room']
+
+    leave_room(room)
+    emit('broadcast', {'user': user, 'message': 'has left the room.'}, broadcast=True, to=room)
 
 @socketio.on('send_message')
 def handle_new_message_event(data):
-    print('Received new message:', data)
-    emit('broadcast_message', {'user': data['user'], 'message': data['message']}, broadcast=True)
+    user = data['user']
+    room = data['room']
+    message = data['message']
+
+    emit('broadcast', {'user': user, 'message': message}, broadcast=True, to=room)
 
 if __name__ == '__main__':
     socketio.run(app)
