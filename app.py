@@ -47,7 +47,7 @@ def on_leave(data):
     room = data['room']
 
     leave_room(room)
-    emit('broadcast', {'user': user, 'message': 'has left the room.'}, broadcast=True, to=room)
+    emit('broadcast', {'user': user, 'message': 'has left the chat.'}, broadcast=True, to=room)
 
 @socketio.on('send_message')
 def handle_new_message_event(data):
