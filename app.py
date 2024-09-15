@@ -1,5 +1,3 @@
-from pyexpat.errors import messages
-
 from flask import Flask, session, request, render_template
 from flask_socketio import SocketIO, emit, join_room, leave_room
 
