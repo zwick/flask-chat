@@ -1,0 +1,119 @@
+<html>
+<head>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+    <script type="text/javascript" charset="utf-8">
+        const socket = io();
+        let active_room = localStorage.getItem('active_room') ?? '#general';
+
+        socket.on('connect', function() {
+            console.log('connected');
+            const username = localStorage.getItem('username');
+            if (username) {
+                console.log('username found', username);
+                document.getElementById('username').value = username;
+                setUsername(username);
+                document.getElementById('app').style.display = 'block';
+            } else {
+                console.log('no username found, login required');
+                document.getElementById('username').focus();
+            }
+
+            document.getElementById('rooms').addEventListener('click', function(event) {
+                const current_room = localStorage.getItem('active_room');
+                const new_room = event.target.innerText
+                if (current_room !== new_room && event.target.tagName === 'LI') {
+                    socket.emit('leave', { room: current_room });
+                    socket.emit('join', { room: new_room });
+                    localStorage.setItem('active_room', new_room);
+                }
+            });
+        });
+
+        socket.on('user_joined', function (data) {
+            console.log('user joined', data);
+            addMessage(data.user, 'has joined the chat.');
+        });
+
+        socket.on('user_left', function (data) {
+            console.log('user left', data);
+            addMessage(data.user, 'has left the chat.');
+        });
+
+        socket.on('broadcast', function (data) {
+            console.log('broadcast', data);
+            addMessage(data.user, data.message);
+        });
+
+        const addMessage = (user, message) => {
+            const messages = document.getElementById('messages');
+            const li = document.createElement('li');
+            li.appendChild(document.createTextNode(user + ': ' + message));
+            messages.appendChild(li);
+        }
+
+        const sendMessage = (message) => {
+            console.log('sending data', localStorage.getItem('active_room'), message);
+            socket.emit("send_message", { room: localStorage.getItem('active_room'), message: message });
+        }
+
+        const setUsername = (username) => {
+            console.log('setting username', document.getElementById('username').value);
+            localStorage.setItem('username', username);
+            socket.emit('update_username', { username: username });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('chat_input').addEventListener('submit', function(event) {
+                event.preventDefault();
+                sendMessage(document.getElementById('message').value);
+                document.getElementById('message').value = '';
+            });
+
+            document.getElementById('username_form').addEventListener('submit', function(event) {
+                event.preventDefault();
+                setUsername(document.getElementById('username').value);
+                document.getElementById('app').style.display = 'block';
+            });
+        });
+    </script>
+</head>
+<body>
+    <header>
+
+    </header>
+    <main>
+        <div>
+            Enter a username to begin:
+            <form id="username_form">
+                <input type="text" id="username" />
+                <button type="submit">Save Username</button>
+            </form>
+        </div>
+        <div id="app" style="display:none;">
+            <div>
+                <h2>Rooms</h2>
+                <ul id="rooms">
+                    <li>#general</li>
+                    <li>#nsfw</li>
+                    <li>#support</li>
+                </ul>
+            </div>
+            <div>
+                <h2>Messages</h2>
+                <ul id="messages">
+
+                </ul>
+                <div>
+                    <form id="chat_input">
+                        <input placeholder="Type your message..." name="message" type="text" id="message" />
+                        <button type="submit">Send Data</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+    <footer>
+
+    </footer>
+</body>
+</html>
